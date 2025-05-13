@@ -1,0 +1,68 @@
+
+<script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
+<script>
+  /* global nn, paper */
+
+  
+
+
+  // function click(event) {
+  //   console.log("Canvas clicked at", event.point);
+  //   // Optionally: Regenerate tree or add interactivity here
+  // }
+  function drawTree(start, length, angle, depth) {
+    if (depth === 0) return;
+
+    const end = new paper.Point(
+      start.x + length * Math.cos(angle),
+      start.y - length * Math.sin(angle)
+    );
+
+    new paper.Path.Line({
+      from: start,
+      to: end,
+      strokeColor: 'brown',
+      strokeWidth: depth
+    });
+
+    const branchAngle = Math.PI / 6; // make the angles always point out at a 30 degree angle
+    const newLength = length * 0.7; // reduce length by 70%
+  
+    
+    drawTree(end, newLength, angle - branchAngle, depth - 1);
+    drawTree(end, newLength, angle + branchAngle, depth - 1);
+
+    if (depth === 1) {
+      new paper.Path.Circle({
+        center: end,
+        radius: 5,
+        fillColor: 'green'
+      });
+    }
+  }
+  function setup() {
+    // Create and attach canvas
+    const canvas = nn.create('canvas')
+      .set({ width: "700px", height: "700px" })
+      .position(0, 0)
+      .addTo('body');
+
+    // Set up Paper.js
+    paper.setup(canvas);
+
+    new paper.Path.Rectangle({
+      point: [0, 0],
+      size: [nn.width, nn.height],
+      fillColor: '#f0f0ff'
+    });
+
+    const start = new paper.Point(350, 650)
+    
+    drawTree(start, 100, Math.PI / 2, 6);
+
+    // paper.view.attach('mousedown', click);
+  }
+
+  nn.on('load', setup);
+</script>

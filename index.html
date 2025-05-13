@@ -3,63 +3,73 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
 <script>
   /* global nn, paper */
-
+  
   
 
-
-  // function click(event) {
-  //   console.log("Canvas clicked at", event.point);
-  //   // Optionally: Regenerate tree or add interactivity here
-  // }
   function drawTree(start, length, angle, depth) {
-    if (depth === 0) return;
+    if (depth === 0) return
 
     const end = new paper.Point(
       start.x + length * Math.cos(angle),
       start.y - length * Math.sin(angle)
-    );
-
+    )
+    
+    // draw a line
     new paper.Path.Line({
       from: start,
       to: end,
       strokeColor: 'brown',
-      strokeWidth: depth
-    });
-
-    const branchAngle = Math.PI / 6; // make the angles always point out at a 30 degree angle
-    const newLength = length * 0.7; // reduce length by 70%
-  
+      strokeWidth: depth * 2 // gets thinner on every iteration since branches are getting further from truck
+    })
     
-    drawTree(end, newLength, angle - branchAngle, depth - 1);
-    drawTree(end, newLength, angle + branchAngle, depth - 1);
-
+    // add leaves or something to the end of each branch
     if (depth === 1) {
       new paper.Path.Circle({
         center: end,
-        radius: 5,
+        radius: 2,
         fillColor: 'green'
-      });
+      })
     }
+    
+    // Choose a random number of child branches (2 to 4)
+    const numBranches = Math.floor(nn.random(2, 5)); // 2, 3, or 4
+
+    for (let i = 0; i < numBranches; i++) {
+      // Random angle spread (centered around the parent angle)
+      const angleOffset = nn.random(-Math.PI / 4, Math.PI / 4); // +/- 45 degrees
+      const newAngle = angle + angleOffset;
+
+      // Randomly reduce length a bit
+      const newLength = length * nn.random(0.6, 0.9);
+
+      drawTree(end, newLength, newAngle, depth - 1);
+    }
+    // const branchAngle = Math.PI / nn.random(4, 10)// make the angles always point out at a 30 degree angle from parent
+    // const newLength = length * nn.random(6, 9)/10 // reduce length by 70%
+    
+    // drawTree(end, newLength, angle - branchAngle, depth - 1)
+    // drawTree(end, newLength, angle + branchAngle, depth - 1)
+    
+   
   }
   function setup() {
     // Create and attach canvas
     const canvas = nn.create('canvas')
       .set({ width: "700px", height: "700px" })
       .position(0, 0)
-      .addTo('body');
+      .addTo('body')
 
-    // Set up Paper.js
-    paper.setup(canvas);
+    paper.setup(canvas)
 
     new paper.Path.Rectangle({
       point: [0, 0],
       size: [nn.width, nn.height],
       fillColor: '#f0f0ff'
-    });
+    })
 
     const start = new paper.Point(350, 650)
     
-    drawTree(start, 100, Math.PI / 2, 6);
+    drawTree(start, 100, Math.PI / 2, 6)
 
     // paper.view.attach('mousedown', click);
   }

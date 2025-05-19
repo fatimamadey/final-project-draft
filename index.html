@@ -1,78 +1,156 @@
-
 <script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
+
 <script>
   /* global nn, paper */
-  
-  
 
-  function drawTree(start, length, angle, depth) {
-    if (depth === 0) return
+  const INITIAL_TRUNK_LENGTH = 120
+  const LENGTH_SCALE = 0.7
+  const BRANCH_ANGLE = Math.PI / 6 * 2
+  const BRANCH_COUNT = 2
+  const MAX_DEPTH = 6
 
-    const end = new paper.Point(
-      start.x + length * Math.cos(angle),
-      start.y - length * Math.sin(angle)
-    )
-    
-    // draw a line
-    new paper.Path.Line({
-      from: start,
-      to: end,
-      strokeColor: 'brown',
-      strokeWidth: depth * 2 // gets thinner on every iteration since branches are getting further from truck
-    })
-    
-    // add leaves or something to the end of each branch
-    if (depth === 1) {
-      new paper.Path.Circle({
-        center: end,
-        radius: 2,
-        fillColor: 'green'
+  let TIME = 0 // in seconds
+  let growingBranches = []
+  let leaves = []
+  let blossoms = []
+  let backgroundRect
+
+  const leafColors = ['#4caf50', '#81c784', '#388e3c', '#66bb6a']
+  const fallleafColors = 
+
+  function createBranch(start_x, start_y, angle, length, depth) {
+    return {
+      start: new paper.Point(start_x, start_y),
+      angle: angle,
+      length: length,
+      depth: depth,
+      progress: 0,
+      path: new paper.Path({
+        strokeColor: 'black',
+        strokeWidth: depth
       })
     }
-    
-    // Choose a random number of child branches (2 to 4)
-    const numBranches = Math.floor(nn.random(2, 5)); // 2, 3, or 4
-
-    for (let i = 0; i < numBranches; i++) {
-      // Random angle spread (centered around the parent angle)
-      const angleOffset = nn.random(-Math.PI / 4, Math.PI / 4); // +/- 45 degrees
-      const newAngle = angle + angleOffset;
-
-      // Randomly reduce length a bit
-      const newLength = length * nn.random(0.6, 0.9);
-
-      drawTree(end, newLength, newAngle, depth - 1);
-    }
-    // const branchAngle = Math.PI / nn.random(4, 10)// make the angles always point out at a 30 degree angle from parent
-    // const newLength = length * nn.random(6, 9)/10 // reduce length by 70%
-    
-    // drawTree(end, newLength, angle - branchAngle, depth - 1)
-    // drawTree(end, newLength, angle + branchAngle, depth - 1)
-    
-   
   }
+
+  function getStage(time) {
+    if (time < 6) return 'grow'
+    if (time < 10) return 'bloom'
+    if (time < 15) return 'fall'
+    if (time < 20) return 'winter'
+    return 'reset'
+  }
+
   function setup() {
-    // Create and attach canvas
     const canvas = nn.create('canvas')
       .set({ width: "700px", height: "700px" })
       .position(0, 0)
       .addTo('body')
-
     paper.setup(canvas)
 
-    new paper.Path.Rectangle({
+    backgroundRect = new paper.Path.Rectangle({
       point: [0, 0],
       size: [nn.width, nn.height],
       fillColor: '#f0f0ff'
     })
 
-    const start = new paper.Point(350, 650)
-    
-    drawTree(start, 100, Math.PI / 2, 6)
+    const root = createBranch(350, 650, Math.PI / 2, INITIAL_TRUNK_LENGTH, MAX_DEPTH)
+    root.path.add(root.start)
+    growingBranches.push(root)
 
-    // paper.view.attach('mousedown', click);
+    paper.view.onFrame = (event) => {
+      TIME += event.delta
+      const stage = getStage(TIME)
+
+      let newBranches = []
+
+      for (let b of growingBranches) {
+        if (b.progress >= 1) continue
+        b.progress += 0.05
+
+        const end = b.start.add(new paper.Point({
+          length: b.length * b.progress,
+          angle: -b.angle * 180 / Math.PI
+        }))
+
+        if (b.path.segments.length > 1) {
+          b.path.removeSegment(1)
+        }
+        b.path.add(end)
+
+        if (b.progress >= 1 && b.depth > 1) {
+          for (let i = 0; i < BRANCH_COUNT; i++) {
+            const direction = i - (BRANCH_COUNT - 1) / 2
+            const angleOffset = BRANCH_ANGLE * direction
+            const angle = b.angle + angleOffset
+            const child = createBranch(end.x, end.y, angle, (b.length * LENGTH_SCALE), (b.depth - 1))
+            child.path.add(end)
+            newBranches.push(child)
+          }
+        }
+
+        if (b.progress >= 1 && b.depth === 1) {
+          const color = new paper.Color(nn.random(leafColors))
+          color.alpha = 0.8
+          const leaf = new paper.Path.Ellipse({
+            center: end,
+            size: [nn.random(12, 15), nn.random(6, 9)],
+            fillColor: color,
+            rotation: Math.random() * 360
+          })
+          leaves.push(leaf)
+        }
+      }
+
+      growingBranches.push(...newBranches)
+
+      // 🌸 Blooming
+      if (stage === 'bloom' && Math.random() < 0.1) {
+        const leaf = nn.random(leaves)
+        if (leaf) {
+          const blossom = new paper.Path.Circle({
+            center: leaf.position.add([nn.random(-5, 5), nn.random(-5, 5)]),
+            radius: nn.random(2, 4),
+            fillColor: nn.random(['#ffc0cb', '#ffe4e1', '#ffb6c1']),
+            opacity: 0.9
+          })
+          blossoms.push(blossom)
+        }
+      }
+
+      // 🍂 Falling leaves
+      if (stage === 'fall') {
+        for (let leaf of leaves) {
+          leaf.position.y += 1.2
+          leaf.position.x += nn.random(-0.5, 0.5)
+          leaf.opacity -= 0.01
+          if (leaf.opacity <= 0) leaf.remove()
+        }
+        leaves = leaves.filter(l => l.opacity > 0)
+      }
+
+      // ❄️ Winter: background and cleanup
+      if (stage === 'winter') {
+        backgroundRect.fillColor = '#e0f7fa'
+        for (let leaf of leaves) leaf.remove()
+        for (let blossom of blossoms) blossom.remove()
+        leaves = []
+        blossoms = []
+      }
+
+      // 🔁 Reset everything
+      if (stage === 'reset') {
+      paper.view.onFrame = null
+      paper.project.clear()
+      TIME = 0
+      growingBranches = []
+      leaves = []
+      blossoms = []
+      setup()
+    }
+
+    }
   }
 
-  nn.on('load', setup);
+  nn.on('load', setup)
 </script>

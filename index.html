@@ -47,10 +47,10 @@
   
   function setBackgroundFromDateTime() {
     const now = new Date()
-    // const month = now.getMonth()
-    // const hour = now.getHours()
-    const month = 2
-    const hour = 21
+    const month = now.getMonth()
+    const hour = now.getHours()
+    // const month = 2
+    // const hour = 21
     season = getSeason(month)
     let timeOfDay = getTimeOfDay(hour)
     console.log(timeOfDay)

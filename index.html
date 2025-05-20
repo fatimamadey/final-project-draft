@@ -14,8 +14,11 @@
   let growingBranches = [];
   let leaves = [];
   const leafColors = ['#4caf50', '#81c784', '#388e3c', '#66bb6a'];
+   // ──────────────────────────────── UI VARIABLES
+  let hasStarted = false;
+  let branchSlider, timeSlider, startButton, titleText, uiElements = [];
 
-  // ────────────────────────────────
+  // ──────────────────────────────── BRANCH & LEAF HELPERS
   function createBranch(x, y, angle, length, depth) {
     return {
       start: new paper.Point(x, y),
@@ -105,6 +108,7 @@
       leafObj.shape = newLeaf;
     }
   }
+
   
   let decayStarted = false;
   let allLeavesGone = false;
@@ -112,7 +116,7 @@
   let fallBatchTimer = 0;
   const fallBatchInterval = 60; // how often to start new batch (~1 sec at 60fps)
   const fallBatchSize = 5; // how many leaves per batch
-
+  
   function startDecay() {
     if (!allLeavesGone) {
       // Time to add a new batch?
@@ -155,14 +159,18 @@
 
     // STEP 2: Decay branches
     growingBranches
-    .sort((a, b) => a.depth - b.depth) // Deepest (smallest depth) first
+    .sort((a, b) => a.depth - b.depth) // Deepest first
     .forEach((branch) => {
       if (branch.path && branch.path.segments.length > 1) {
-        while (branch.path.strokeWidth > 0.01){
-          branch.path.strokeWidth *= 0.996;
-        // If it’s extremely thin, remove it
+        // Dissolve visually
+        branch.path.strokeWidth *= 0.995;
+        branch.path.strokeColor.alpha *= 0.995;
+        branch.path.strokeColor.hue += nn.random(-0.5, 0.5);
+
+        // Once very thin and invisible, remove it
+        if (branch.path.strokeWidth < 0.05 || branch.path.strokeColor.alpha < 0.01) {
+          branch.path.remove();
         }
-        branch.path.remove();
       }
     });
   }

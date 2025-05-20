@@ -154,24 +154,15 @@
     }
 
     // STEP 2: Decay branches
-    growingBranches.forEach((branch) => {
+    growingBranches
+    .sort((a, b) => a.depth - b.depth) // Deepest (smallest depth) first
+    .forEach((branch) => {
       if (branch.path && branch.path.segments.length > 1) {
-        // Gently shrink the branch
-        // branch.length *= 0.999; // MUCH slower decay
-
-//         const end = branch.start.add(
-//           new paper.Point({
-//             length: branch.length,
-//             angle: -branch.angle * 180 / Math.PI
-//           })
-//         );
-
-//         branch.path.removeSegments(); // Clear old path
-//         branch.path.add(branch.start);
-//         branch.path.add(end);
-
-        // Optional: slowly thin the line
-        branch.path.strokeWidth *= 0.996;
+        while (branch.path.strokeWidth > 0.01){
+          branch.path.strokeWidth *= 0.996;
+        // If it’s extremely thin, remove it
+        }
+        branch.path.remove();
       }
     });
   }
